@@ -149,10 +149,6 @@ my_sv_copypv(pTHX_ SV *const dsv, SV *const ssv)
 #if PERL_VERSION_GE(5,16,0)
 #  define HAVE_UNICODE_PACKAGE_NAMES
 
-#  ifndef sv_sethek
-#    define sv_sethek(a, b)  Perl_sv_sethek(aTHX_ a, b)
-#  endif
-
 #  ifndef sv_ref
 #  define sv_ref(dst, sv, ob) my_sv_ref(aTHX_ dst, sv, ob)
 static SV *
