@@ -50,6 +50,42 @@
 #  include "multicall.h"
 #endif
 
+#ifndef x_find_runcv
+#ifndef find_runcv
+#define find_runcv(d) THX_find_runcv(aTHX_ d)
+#define x_find_runcv(d) find_runcv(d)
+CV*
+THX_find_runcv(pTHX_ U32 *db_seqp)
+{
+    PERL_SI      *si;
+
+    if (db_seqp)
+        *db_seqp = PL_curcop->cop_seq;
+    for (si = PL_curstackinfo; si; si = si->si_prev) {
+        I32 ix;
+        for (ix = si->si_cxix; ix >= 0; ix--) {
+            const PERL_CONTEXT *cx = &(si->si_cxstack[ix]);
+            if (CxTYPE(cx) == CXt_SUB || CxTYPE(cx) == CXt_FORMAT) {
+                CV * const cv = cx->blk_sub.cv;
+                /* skip DB:: code */
+                if (db_seqp && PL_debstash && CvSTASH(cv) == PL_debstash) {
+                    *db_seqp = cx->blk_oldcop->cop_seq;
+                    continue;
+                }
+                return cv;
+            }
+            else if (CxTYPE(cx) == CXt_EVAL && !CxTRYBLOCK(cx))
+                return PL_compcv;
+        }
+    }
+    return PL_main_cv;
+}
+#else
+#define x_find_runcv(d) Perl_find_runcv(d)
+#endif /* find_runcv */
+#endif /* x_find_runcv */
+
+
 #if !PERL_VERSION_GE(5,23,8)
 #  define UNUSED_VAR_newsp PERL_UNUSED_VAR(newsp)
 #else
@@ -2035,7 +2071,7 @@ ROUTINE()
     PREINIT:
         CV *cv;
     CODE:
-        cv = Perl_find_runcv(aTHX_ NULL);
+        cv = x_find_runcv(aTHX_ NULL);
         if (CvUNIQUE(cv) && !CvSPECIAL(cv))
             RETVAL = &PL_sv_undef;
         else
